@@ -113,7 +113,6 @@ data class CreativePreset(
 fun ReelMakerScreen(createVideoUri: () -> Uri?) {
     val scope = rememberCoroutineScope()
     val snackState = remember { SnackbarHostState() }
-    val context = LocalContext.current
 
     val reelAssets = remember { mutableStateListOf<ReelAsset>() }
     val presets = remember {
@@ -201,7 +200,7 @@ fun ReelMakerScreen(createVideoUri: () -> Uri?) {
                         onClick = {
                             val permission = Manifest.permission.CAMERA
                             if (ContextCompat.checkSelfPermission(
-                                    context,
+                                    LocalContext.current,
                                     permission
                                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED
                             ) {
