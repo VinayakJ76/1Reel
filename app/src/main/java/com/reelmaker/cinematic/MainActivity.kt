@@ -2,8 +2,6 @@ package com.reelmaker.cinematic
 
 import android.Manifest
 import android.content.ContentValues
-import android.content.Context
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -66,6 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
 import com.reelmaker.cinematic.ui.theme.CinematicReelTheme
 import kotlinx.coroutines.launch
 
@@ -77,7 +76,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             CinematicReelTheme {
                 ReelMakerScreen(
-                    appContext = applicationContext,
                     createVideoUri = { createVideoUri() }
                 )
             }
@@ -110,19 +108,9 @@ data class CreativePreset(
     val detail: String
 )
 
-private fun canUseCamera(context: Context): Boolean {
-    return ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.CAMERA
-    ) == PackageManager.PERMISSION_GRANTED
-}
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun ReelMakerScreen(
-    appContext: Context,
-    createVideoUri: () -> Uri?
-) {
+fun ReelMakerScreen(createVideoUri: () -> Uri?) {
     val scope = rememberCoroutineScope()
     val snackState = remember { SnackbarHostState() }
 
@@ -190,15 +178,6 @@ fun ReelMakerScreen(
         }
     )
 
-    val onShootClip: () -> Unit = {
-        if (canUseCamera(appContext)) {
-            pendingCaptureUri = createVideoUri()
-            pendingCaptureUri?.let(captureVideoLauncher::launch)
-        } else {
-            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Cinematic Reel Maker") })
@@ -218,7 +197,19 @@ fun ReelMakerScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(
-                        onClick = onShootClip
+                        onClick = {
+                            val permission = Manifest.permission.CAMERA
+                            if (ContextCompat.checkSelfPermission(
+                                    LocalContext.current,
+                                    permission
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            ) {
+                                pendingCaptureUri = createVideoUri()
+                                pendingCaptureUri?.let { captureVideoLauncher.launch(it) }
+                            } else {
+                                cameraPermissionLauncher.launch(permission)
+                            }
+                        }
                     ) {
                         Icon(Icons.Default.MovieCreation, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -372,3 +363,4 @@ private fun EmptyTimeline() {
         }
     }
 }
+
