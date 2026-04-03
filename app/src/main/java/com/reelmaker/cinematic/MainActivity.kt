@@ -2,7 +2,6 @@ package com.reelmaker.cinematic
 
 import android.Manifest
 import android.content.ContentValues
-import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -65,6 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
 import com.reelmaker.cinematic.ui.theme.CinematicReelTheme
 import kotlinx.coroutines.launch
 
@@ -76,7 +76,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             CinematicReelTheme {
                 ReelMakerScreen(
-                    appContext = this,
                     createVideoUri = { createVideoUri() }
                 )
             }
@@ -111,10 +110,7 @@ data class CreativePreset(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun ReelMakerScreen(
-    appContext: Context,
-    createVideoUri: () -> Uri?
-) {
+fun ReelMakerScreen(createVideoUri: () -> Uri?) {
     val scope = rememberCoroutineScope()
     val snackState = remember { SnackbarHostState() }
 
@@ -204,7 +200,7 @@ fun ReelMakerScreen(
                         onClick = {
                             val permission = Manifest.permission.CAMERA
                             if (ContextCompat.checkSelfPermission(
-                                    appContext,
+                                    LocalContext.current,
                                     permission
                                 ) == android.content.pm.PackageManager.PERMISSION_GRANTED
                             ) {
@@ -367,3 +363,4 @@ private fun EmptyTimeline() {
         }
     }
 }
+
