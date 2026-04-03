@@ -63,6 +63,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
 import com.reelmaker.cinematic.ui.theme.CinematicReelTheme
 import kotlinx.coroutines.launch
 
@@ -108,9 +110,7 @@ data class CreativePreset(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun ReelMakerScreen(
-    createVideoUri: () -> Uri?
-) {
+fun ReelMakerScreen(createVideoUri: () -> Uri?) {
     val scope = rememberCoroutineScope()
     val snackState = remember { SnackbarHostState() }
 
@@ -128,6 +128,17 @@ fun ReelMakerScreen(
     var selectedPreset by rememberSaveable { mutableStateOf(presets.first().title) }
     var pendingCaptureUri by remember { mutableStateOf<Uri?>(null) }
 
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            if (!granted) {
+                scope.launch {
+                    snackState.showSnackbar("Camera permission is needed to shoot reel clips.")
+                }
+            }
+        }
+    )
+
     val captureVideoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CaptureVideo(),
         onResult = { success ->
@@ -141,20 +152,6 @@ fun ReelMakerScreen(
                 )
             }
             pendingCaptureUri = null
-        }
-    )
-
-    val cameraPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted ->
-            if (granted) {
-                pendingCaptureUri = createVideoUri()
-                pendingCaptureUri?.let(captureVideoLauncher::launch)
-            } else {
-                scope.launch {
-                    snackState.showSnackbar("Camera permission is needed to shoot reel clips.")
-                }
-            }
         }
     )
 
@@ -181,10 +178,6 @@ fun ReelMakerScreen(
         }
     )
 
-    val onShootClip: () -> Unit = {
-        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Cinematic Reel Maker") })
@@ -204,7 +197,19 @@ fun ReelMakerScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Button(
-                        onClick = onShootClip
+                        onClick = {
+                            val permission = Manifest.permission.CAMERA
+                            if (ContextCompat.checkSelfPermission(
+                                    LocalContext.current,
+                                    permission
+                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                            ) {
+                                pendingCaptureUri = createVideoUri()
+                                pendingCaptureUri?.let { captureVideoLauncher.launch(it) }
+                            } else {
+                                cameraPermissionLauncher.launch(permission)
+                            }
+                        }
                     ) {
                         Icon(Icons.Default.MovieCreation, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -358,3 +363,4 @@ private fun EmptyTimeline() {
         }
     }
 }
+
